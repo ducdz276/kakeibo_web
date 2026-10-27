@@ -69,7 +69,9 @@
     "username": "ユーザー名",
     "confirm_password": "パスワードの確認",
     "register_btn": "登録",
-    "server_error": "サーバーに接続できませんでした。もう一度お試しください。"
+    "server_error": "サーバーに接続できませんでした。もう一度お試しください。",
+    "has_account": "すでにアカウントをお持ちですか？",
+    "login_now": "ログイン"
   },
   "categories": {
     "food": "🍔 飲食費",

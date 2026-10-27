@@ -1,17 +1,23 @@
+
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
-import { useTranslation } from "react-i18next"; // <-- Import i18n
+import { useTranslation } from "react-i18next";
 
 const Register = () => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
   });
+
   const [message, setMessage] = useState("");
-  const navigate = useNavigate();
+  const [messageType, setMessageType] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
@@ -19,117 +25,460 @@ const Register = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    // Xóa thông báo cũ khi người dùng sửa dữ liệu
+    if (message) {
+      setMessage("");
+      setMessageType("");
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return;
+
+    const username = formData.username.trim();
+    const email = formData.email.trim();
+
+    if (!username || !email || !formData.password) {
+      setMessage(t("auth.server_error"));
+      setMessageType("error");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+    setMessageType("");
+
     try {
-      const response = await axios.post(
+      await axios.post(
         "http://localhost:5000/api/auth/register",
-        formData
+        {
+          username,
+          email,
+          password: formData.password,
+        }
       );
-      setMessage("✅ " + t("auth.register_success"));
-      setTimeout(() => navigate("/login"), 2000);
+
+      setMessage(t("auth.register_success"));
+      setMessageType("success");
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
     } catch (error) {
-      setMessage(
-        "❌ " + (error.response?.data?.message || t("auth.server_error"))
-      );
+      const errorMessage =
+        error.response?.data?.message || t("auth.server_error");
+
+      setMessage(errorMessage);
+      setMessageType("error");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const isJapanese = i18n.language?.startsWith("ja");
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4 relative">
-      {/* Nút đổi ngôn ngữ */}
-      <div className="absolute top-4 right-4 space-x-2">
-        <button
-          onClick={() => changeLanguage("vi")}
-          className="px-3 py-1 text-sm font-medium border border-gray-300 rounded-md hover:bg-gray-100 bg-white"
-        >
-          VI
-        </button>
-        <button
-          onClick={() => changeLanguage("ja")}
-          className="px-3 py-1 text-sm font-medium border border-gray-300 rounded-md hover:bg-gray-100 bg-white"
-        >
-          JA
-        </button>
-      </div>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#faf8f5] px-4 py-12 text-[#393448] selection:bg-[#e8defb] sm:px-6">
+      {/* Background decorations */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[#eee5fb] opacity-70 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-24 -right-20 h-80 w-80 rounded-full bg-[#f9e4e5] opacity-60 blur-3xl"
+      />
 
-      <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg border border-gray-100">
-        <h1 className="text-3xl font-bold text-center text-blue-600 mb-6">
-          {t("auth.register_title")}
-        </h1>
-
-        {message && (
-          <div
-            className={`p-3 mb-4 rounded text-center font-medium ${
-              message.includes("✅")
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
+      {/* Language selector */}
+      <div className="absolute right-4 top-5 z-10 sm:right-8 sm:top-7">
+        <div className="flex items-center gap-1 rounded-full border border-[#e9e2e9] bg-white/80 p-1 shadow-sm backdrop-blur">
+          <button
+            type="button"
+            onClick={() => changeLanguage("vi")}
+            aria-pressed={!isJapanese}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+              !isJapanese
+                ? "bg-[#eee7fb] text-[#7257a5]"
+                : "text-[#817b89] hover:bg-[#f7f3fa]"
             }`}
           >
-            {message}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t("auth.username")}
-            </label>
-            <input
-              type="text"
-              name="username"
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t("auth.email")}
-            </label>
-            <input
-              type="email"
-              name="email"
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t("auth.password")}
-            </label>
-            <input
-              type="password"
-              name="password"
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+            VI
+          </button>
 
           <button
-            type="submit"
-            className="w-full py-2 px-4 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors font-medium mt-4"
+            type="button"
+            onClick={() => changeLanguage("ja")}
+            aria-pressed={isJapanese}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+              isJapanese
+                ? "bg-[#f8e5e5] text-[#b85f68]"
+                : "text-[#817b89] hover:bg-[#f7f3fa]"
+            }`}
           >
-            {t("auth.register_btn")}
+            JA
           </button>
-        </form>
-
-        <p className="mt-6 text-sm text-center text-gray-600">
-          {t("auth.has_account")}{" "}
-          <Link
-            to="/login"
-            className="text-blue-600 hover:underline font-medium"
-          >
-            {t("auth.login_now")}
-          </Link>
-        </p>
+        </div>
       </div>
-    </div>
+
+      <div className="relative z-0 w-full max-w-[440px]">
+        {/* Brand */}
+        <div className="mb-7 text-center">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[#b8a2e8]"
+            aria-label="Finora home"
+          >
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eee7fb] text-[#8066b5]">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                className="h-6 w-6"
+                aria-hidden="true"
+              >
+                <path
+                  d="M4 17.5 9 12l3.5 3.5L20 7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M15.5 7H20v4.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+
+            <span className="text-2xl font-bold tracking-tight text-[#393448]">
+              finora<span className="text-[#bc7d91]">.</span>
+            </span>
+          </Link>
+
+          <div className="mt-5 flex items-center justify-center gap-2 text-[10px] font-medium tracking-[0.24em] text-[#a39aa8]">
+            <span className="h-px w-7 bg-[#e7cbd0]" />
+            YOUR FINANCIAL JOURNEY
+            <span className="h-px w-7 bg-[#e7cbd0]" />
+          </div>
+        </div>
+
+        {/* Register card */}
+        <section className="rounded-[28px] border border-white bg-white/90 p-6 shadow-[0_20px_70px_rgba(82,62,104,0.08)] backdrop-blur-xl sm:p-9">
+          <div className="mb-7">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#faf0f0] px-3 py-1.5 text-xs font-medium text-[#b66d79]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#d99ba3]" />
+              {isJapanese ? "新しいスタート" : "Bắt đầu hành trình mới"}
+            </div>
+
+            <h1 className="text-2xl font-bold tracking-tight text-[#393448] sm:text-[28px]">
+              {t("auth.register_title")}
+            </h1>
+
+            <p className="mt-2 text-sm leading-6 text-[#898391]">
+              {isJapanese
+                ? "アカウントを作成して、お金の管理を始めましょう。"
+                : "Tạo tài khoản để quản lý tài chính của bạn dễ dàng hơn."}
+            </p>
+          </div>
+
+          {/* Feedback */}
+          {message && (
+            <div
+              role="status"
+              aria-live="polite"
+              className={`mb-5 flex items-start gap-2.5 rounded-xl border p-3.5 text-sm leading-5 ${
+                messageType === "success"
+                  ? "border-[#d7eadc] bg-[#f0f8f1] text-[#427b50]"
+                  : "border-[#f0d5d7] bg-[#fff4f4] text-[#ad555f]"
+              }`}
+            >
+              <span aria-hidden="true">
+                {messageType === "success" ? "✓" : "!"}
+              </span>
+              <span>{message}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Username */}
+            <div>
+              <label
+                htmlFor="username"
+                className="mb-2 block text-sm font-semibold text-[#514a5e]"
+              >
+                {t("auth.username")}
+              </label>
+
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[#aaa1b4]">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    className="h-5 w-5"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="8" r="4" />
+                    <path
+                      d="M4.5 20a7.5 7.5 0 0 1 15 0"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+
+                <input
+                  id="username"
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder={
+                    isJapanese ? "ユーザー名を入力" : "Nhập tên người dùng"
+                  }
+                  autoComplete="username"
+                  maxLength={50}
+                  required
+                  disabled={loading}
+                  className="w-full rounded-xl border border-[#e9e4ec] bg-[#fdfcfd] py-3.5 pl-11 pr-4 text-sm text-[#393448] outline-none transition placeholder:text-[#b8b1bf] hover:border-[#d8cce8] focus:border-[#b5a0dc] focus:bg-white focus:ring-4 focus:ring-[#eee7fb]/70 disabled:opacity-60"
+                />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-2 block text-sm font-semibold text-[#514a5e]"
+              >
+                {t("auth.email")}
+              </label>
+
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[#aaa1b4]">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    className="h-5 w-5"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="5" width="18" height="14" rx="3" />
+                    <path
+                      d="m4 7 8 6 8-6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder={
+                    isJapanese ? "メールアドレスを入力" : "Nhập email của bạn"
+                  }
+                  autoComplete="email"
+                  maxLength={254}
+                  required
+                  disabled={loading}
+                  className="w-full rounded-xl border border-[#e9e4ec] bg-[#fdfcfd] py-3.5 pl-11 pr-4 text-sm text-[#393448] outline-none transition placeholder:text-[#b8b1bf] hover:border-[#d8cce8] focus:border-[#b5a0dc] focus:bg-white focus:ring-4 focus:ring-[#eee7fb]/70 disabled:opacity-60"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-2 block text-sm font-semibold text-[#514a5e]"
+              >
+                {t("auth.password")}
+              </label>
+
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[#aaa1b4]">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    className="h-5 w-5"
+                    aria-hidden="true"
+                  >
+                    <rect x="4" y="10" width="16" height="11" rx="3" />
+                    <path
+                      d="M8 10V7a4 4 0 0 1 8 0v3"
+                      strokeLinecap="round"
+                    />
+                    <path d="M12 14v3" strokeLinecap="round" />
+                  </svg>
+                </span>
+
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder={
+                    isJapanese ? "パスワードを入力" : "Nhập mật khẩu"
+                  }
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                  disabled={loading}
+                  className="w-full rounded-xl border border-[#e9e4ec] bg-[#fdfcfd] py-3.5 pl-11 pr-16 text-sm text-[#393448] outline-none transition placeholder:text-[#b8b1bf] hover:border-[#d8cce8] focus:border-[#b5a0dc] focus:bg-white focus:ring-4 focus:ring-[#eee7fb]/70 disabled:opacity-60"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute inset-y-0 right-3 flex items-center px-1 text-xs font-medium text-[#8e7aa8] transition hover:text-[#665080] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b5a0dc]"
+                  aria-label={
+                    showPassword
+                      ? isJapanese
+                        ? "パスワードを隠す"
+                        : "Ẩn mật khẩu"
+                      : isJapanese
+                        ? "パスワードを表示"
+                        : "Hiện mật khẩu"
+                  }
+                >
+                  {showPassword
+                    ? isJapanese
+                      ? "非表示"
+                      : "Ẩn"
+                    : isJapanese
+                      ? "表示"
+                      : "Hiện"}
+                </button>
+              </div>
+
+              <p className="mt-2 text-xs leading-5 text-[#a19aa8]">
+                {isJapanese
+                  ? "パスワードは8文字以上で入力してください。"
+                  : "Mật khẩu cần có ít nhất 8 ký tự."}
+              </p>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#8270b5] px-5 py-3.5 text-sm font-semibold text-white shadow-[0_7px_18px_rgba(130,112,181,0.20)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#715da7] hover:shadow-[0_10px_24px_rgba(130,112,181,0.28)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#e8defb] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? (
+                <>
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      opacity=".3"
+                    />
+                    <path
+                      d="M21 12a9 9 0 0 0-9-9"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  {isJapanese ? "登録中..." : "Đang đăng ký..."}
+                </>
+              ) : (
+                <>
+                  {t("auth.register_btn")}
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M5 12h14m-6-6 6 6-6 6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="my-6 flex items-center gap-3">
+            <span className="h-px flex-1 bg-[#eee9f0]" />
+            <span className="text-[10px] tracking-[0.12em] text-[#b2aab7]">
+              FINORA
+            </span>
+            <span className="h-px flex-1 bg-[#eee9f0]" />
+          </div>
+
+          <p className="text-center text-sm text-[#8b8493]">
+            {t("auth.has_account")}{" "}
+            <Link
+              to="/login"
+              className="font-semibold text-[#9b6eae] underline decoration-[#e6d7ec] underline-offset-4 transition hover:text-[#72518a] hover:decoration-[#b9a0c8]"
+            >
+              {t("auth.login_now")}
+            </Link>
+          </p>
+        </section>
+
+        {/* Footer */}
+        <footer className="mt-6 text-center">
+          <div className="flex items-center justify-center gap-2 text-xs text-[#a49ba8]">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"
+                strokeLinejoin="round"
+              />
+              <path
+                d="m9 12 2 2 4-4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {isJapanese
+              ? "あなたの毎日に、安心できるお金の管理を。"
+              : "Quản lý tài chính an tâm hơn mỗi ngày."}
+          </div>
+
+          <p className="mt-2 text-[10px] tracking-wide text-[#b7afb9]">
+            © {new Date().getFullYear()} Finora
+          </p>
+        </footer>
+      </div>
+    </main>
   );
 };
 

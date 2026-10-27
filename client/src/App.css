@@ -1,3 +1,10 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700&display=swap");
+
+body,
+button,
+input {
+  font-family: "Inter", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+}
 .counter {
   font-size: 16px;
   padding: 5px 10px;
@@ -167,7 +174,7 @@
 
   &::before,
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: -4.5px;
     border: 5px solid transparent;
